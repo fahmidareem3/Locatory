@@ -4,16 +4,19 @@ const morgan = require("morgan");
 const errorHandler = require("./middleware/error");
 const connectDB = require("./config/db");
 const cookieParser = require("cookie-parser");
+const swaggerUI = require("swagger-ui-express");
+const swaggerJsDoc = require("swagger-jsdoc");
 
-//Load env vars
+// Load env vars
 dotenv.config({ path: "./config/config.env" });
 
-//Connect to database
+// Connect to database
 connectDB();
 
-//file upload
+// File upload
 const fileUpload = require("express-fileupload");
-//Route files
+
+// Route files
 const places = require("./routes/places");
 const auth = require("./routes/auth");
 const reviews = require("./routes/reviews");
@@ -23,25 +26,56 @@ const upload = require("./routes/upload");
 
 const app = express();
 
-//Body parser
+// Body parser
 app.use(express.json());
 
-//file uploader
+// File uploader
 app.use(
   fileUpload({
     useTempFiles: true,
   })
 );
-//Cookie parser
+
+// Cookie parser
 app.use(cookieParser());
 
-//Mount routers
+// Mount routers
 app.use("/api/places", places);
 app.use("/api/auth", auth);
 app.use("/api/reviews", reviews);
 app.use("/api/likes", likes);
 app.use("/api/dislikes", dislikes);
 app.use("/api/upload", upload);
+
+// Define Swagger options
+const options = {
+  failOnErrors: true,
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Locatory",
+      description: "A social media application for creating places and reviews",
+      version: "1.0.0",
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          in: "header",
+          name: "Authorization",
+          description: "Bearer token to access these api endpoints",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+  },
+  apis: ["./routes/*.js"],
+};
+const swaggerDocs = swaggerJsDoc(options);
+
+// Create a route to serve Swagger UI documentation
+app.use("/api", swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 app.use(errorHandler);
 
@@ -54,9 +88,9 @@ const server = app.listen(
   )
 );
 
-//Handle unhandled rejections
+// Handle unhandled rejections
 process.on("unhandledRejection", (err, promise) => {
-  console.log(`Error : ${err.message}`);
-  //Close server and exit
+  console.log(`Error: ${err.message}`);
+  // Close server and exit
   server.close(() => process.exit(1));
 });
